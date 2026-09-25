@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
-use anchor_client::{Client, Cluster, Program, Signer};
+use anchor_client::{Client, Cluster, Signer};
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::system_program;
 use anchor_lang::Key;
-use solana_keypair::Keypair;
+use solana_keypair::{read_keypair_file, Keypair};
 
 use guardrail::{accounts, instruction};
 
@@ -12,7 +12,11 @@ const LAMPORTS_PER_SOL: u64 = 1_000_000_000;
 
 #[test]
 fn guardrail_policy_enforcement() {
-    let owner = Keypair::new();
+    let owner = read_keypair_file(
+        "/home/arief/.config/solana/id.json",
+    )
+    .expect("failed to load Solana CLI keypair");
+
     let agent_authority = Keypair::new();
     let allowed_recipient = Keypair::new();
     let blocked_recipient = Keypair::new();
@@ -25,17 +29,7 @@ fn guardrail_policy_enforcement() {
 
     let owner_pubkey = program.payer().key();
 
-    // Fund owner and test accounts.
-    let signature = program
-        .rpc()
-        .request_airdrop(&owner_pubkey, 100 * LAMPORTS_PER_SOL)
-        .expect("failed to request owner airdrop");
-
-    program
-        .rpc()
-        .confirm_transaction(&signature)
-        .expect("failed to confirm owner airdrop");
-
+    // Fund test accounts.
     let signature = program
         .rpc()
         .request_airdrop(&agent_authority.pubkey(), 10 * LAMPORTS_PER_SOL)
