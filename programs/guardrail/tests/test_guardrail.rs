@@ -12,10 +12,8 @@ const LAMPORTS_PER_SOL: u64 = 1_000_000_000;
 
 #[test]
 fn guardrail_policy_enforcement() {
-    let owner = read_keypair_file(
-        "/home/arief/.config/solana/id.json",
-    )
-    .expect("failed to load Solana CLI keypair");
+    let owner = read_keypair_file("/home/arief/.config/solana/id.json")
+        .expect("failed to load Solana CLI keypair");
 
     let agent_authority = Keypair::new();
     let allowed_recipient = Keypair::new();
