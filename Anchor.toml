@@ -2,6 +2,13 @@ skip_local_validator = false
 
 [toolchain]
 
+[workspace]
+members = [
+    "programs/*",
+]
+idls = "client/src/idl"
+types = "client/src/idl"
+
 [features]
 resolution = true
 skip-lint = false
