@@ -1,0 +1,22 @@
+{
+  "name": "agentpay-client",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AgentPay client and Devnet demo for the Guardrail Solana program.",
+  "type": "module",
+  "scripts": {
+    "demo:devnet": "tsx src/demo.ts"
+  },
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "dependencies": {
+    "@anchor-lang/core": "^1.0.0",
+    "@solana/web3.js": "^1.99.0",
+    "bn.js": "^5.2.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
