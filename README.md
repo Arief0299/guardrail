@@ -20,25 +20,19 @@ The goal is to make payment execution deterministic: a payment is executed only 
 
 ## Architecture
 
-```text
-        +----------------------+
-        | Policy Verification  |
-        +----------------------+
-                   |
-                   v
-        +----------------------+
-        | Authorization        |
-        | Recipient            |
-        | Per-Tx Limit         |
-        | Daily Limit          |
-        | Expiry               |
-        | Pause State          |
-        | Vault Balance        |
-        +----------+-----------+
-                   |
-                   v
-              Payment
-```
+![Guardrail architecture](docs/guardrail-architecture.svg)
+
+Guardrail separates policy management from payment execution. The owner configures the policy and funds the vault, while the configured agent authority can execute payments only when the on-chain policy checks pass.
+
+### Execute Payment Flow
+
+1. **Validate authorization** — the configured agent authority must sign the payment request.
+2. **Validate policy** — pause state, expiry, recipient allowlist, per-transaction limit, and daily spending limit are checked.
+3. **Validate vault balance** — the payment must leave the required rent-exempt reserve.
+4. **Transfer funds** — SOL moves from the agent PDA to the allowed recipient.
+5. **Update state** — daily spending state is updated and a `PaymentExecuted` event is emitted.
+
+Any failed policy check rejects the transaction before the payment is executed.
 
 ## Core Instructions
 
@@ -102,7 +96,7 @@ Owner-only resume operation.
 
 ## Test Coverage
 
-The integration test covers:
+The integration test covers both successful execution and policy-enforcement failures:
 
 | Test | Result |
 |---|---|
@@ -115,13 +109,26 @@ The integration test covers:
 | Daily limit enforced | PASS |
 | Pause blocks payment | PASS |
 | Resume agent | PASS |
+| Unauthorized owner rejected | PASS |
+| Expired policy rejected | PASS |
+| Zero transaction limit rejected | PASS |
+| Daily limit below transaction limit rejected | PASS |
+| Already-expired policy rejected | PASS |
+| Insufficient vault balance rejected | PASS |
 
-Latest integration test result:
+The latest live local-validator run completed with:
 
 ```text
-1 passed; 0 failed
+======================================
 ALL GUARDRAIL TESTS PASSED
+======================================
+
+test guardrail_policy_enforcement ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 138.39s
 ```
+
+The suite validates the core payment path as well as authorization, recipient restrictions, spending limits, pause/resume behavior, policy expiry, invalid policy configuration, and vault-balance protection.
 
 ## Verification
 
@@ -140,6 +147,22 @@ cargo clippy --workspace --all-targets -- -D warnings
 Run the Guardrail integration test:
 
 ```bash
+cargo test --test test_guardrail -- --nocapture
+```
+
+For a clean deterministic test run, reset the local validator before deployment:
+
+```bash
+pkill -9 -f solana-test-validator
+sleep 2
+solana-test-validator --reset
+```
+
+Then, from the repository root:
+
+```bash
+anchor build
+anchor program deploy
 cargo test --test test_guardrail -- --nocapture
 ```
 
