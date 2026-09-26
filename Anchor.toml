@@ -9,6 +9,9 @@ skip-lint = false
 [programs.localnet]
 guardrail = "HP8ptgh4CDEwgR7rSESkfR4ZxyrLcg5VfkossDLwU5RS"
 
+[programs.devnet]
+guardrail = "HP8ptgh4CDEwgR7rSESkfR4ZxyrLcg5VfkossDLwU5RS"
+
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
