@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+<rect width="1400" height="900" fill="#ffffff"/>
+<text x="70" y="70" font-family="Arial, sans-serif" font-size="38" font-weight="700" fill="#173b8f">Guardrail</text>
+<text x="70" y="105" font-family="Arial, sans-serif" font-size="20" fill="#4b6385">Solana policy-enforcement layer for controlled agent payments</text>
+
+<!-- Actors -->
+<rect x="55" y="150" width="285" height="360" rx="18" fill="#eef6ff" stroke="#4a90e2" stroke-width="2"/>
+<text x="80" y="190" font-family="Arial" font-size="26" font-weight="700" fill="#173b8f">Actors</text>
+<text x="80" y="240" font-family="Arial" font-size="21" font-weight="700">Owner</text>
+<text x="80" y="268" font-family="Arial" font-size="16" fill="#52677f">Initialize • Update • Deposit</text>
+<text x="80" y="291" font-family="Arial" font-size="16" fill="#52677f">Pause • Resume</text>
+<text x="80" y="345" font-family="Arial" font-size="21" font-weight="700">Agent Authority</text>
+<text x="80" y="373" font-family="Arial" font-size="16" fill="#52677f">Execute payments within policy</text>
+<text x="80" y="427" font-family="Arial" font-size="21" font-weight="700">Allowed Recipient</text>
+<text x="80" y="455" font-family="Arial" font-size="16" fill="#52677f">Receives approved funds</text>
+<text x="80" y="487" font-family="Arial" font-size="15" fill="#b42318">Unauthorized recipient/agent → rejected</text>
+
+<!-- Program -->
+<rect x="390" y="150" width="430" height="360" rx="18" fill="#f4f1ff" stroke="#6554c0" stroke-width="2"/>
+<text x="420" y="190" font-family="Arial" font-size="26" font-weight="700" fill="#3f2b96">Guardrail Program</text>
+<text x="420" y="218" font-family="Arial" font-size="15" fill="#52677f">programs/guardrail/src/lib.rs</text>
+<rect x="420" y="245" width="370" height="48" rx="10" fill="#ffffff" stroke="#a79be5"/>
+<text x="440" y="276" font-family="Arial" font-size="18" font-weight="700">initialize_agent</text>
+<rect x="420" y="305" width="370" height="48" rx="10" fill="#ffffff" stroke="#a79be5"/>
+<text x="440" y="336" font-family="Arial" font-size="18" font-weight="700">update_policy</text>
+<rect x="420" y="365" width="370" height="48" rx="10" fill="#ffffff" stroke="#a79be5"/>
+<text x="440" y="396" font-family="Arial" font-size="18" font-weight="700">deposit</text>
+<rect x="420" y="425" width="370" height="48" rx="10" fill="#ffffff" stroke="#a79be5"/>
+<text x="440" y="456" font-family="Arial" font-size="18" font-weight="700">execute_payment</text>
+<text x="420" y="500" font-family="Arial" font-size="15" fill="#52677f">pause_agent • resume_agent</text>
+
+<!-- Policy -->
+<rect x="870" y="150" width="475" height="360" rx="18" fill="#f2fbf6" stroke="#35a66f" stroke-width="2"/>
+<text x="900" y="190" font-family="Arial" font-size="26" font-weight="700" fill="#176b47">Policy Enforcement</text>
+<text x="900" y="232" font-family="Arial" font-size="18">✓ agent authority</text>
+<text x="900" y="264" font-family="Arial" font-size="18">✓ allowed recipient</text>
+<text x="900" y="296" font-family="Arial" font-size="18">✓ per-transaction limit</text>
+<text x="900" y="328" font-family="Arial" font-size="18">✓ daily spending limit</text>
+<text x="900" y="360" font-family="Arial" font-size="18">✓ policy expiry</text>
+<text x="900" y="392" font-family="Arial" font-size="18">✓ paused / active state</text>
+<text x="900" y="424" font-family="Arial" font-size="18">✓ sufficient vault balance</text>
+<text x="900" y="456" font-family="Arial" font-size="18">✓ rent-exempt reserve</text>
+<text x="900" y="490" font-family="Arial" font-size="15" fill="#52677f">Any failed check → transaction rejected</text>
+
+<!-- arrows -->
+<path d="M340 250 L390 250" stroke="#2f80ed" stroke-width="4" marker-end="url(#arrowBlue)"/>
+<path d="M340 370 L390 370" stroke="#2f80ed" stroke-width="4" marker-end="url(#arrowBlue)"/>
+<path d="M820 330 L870 330" stroke="#35a66f" stroke-width="4" marker-end="url(#arrowGreen)"/>
+
+<!-- On-chain -->
+<rect x="55" y="555" width="1290" height="245" rx="18" fill="#f8fbff" stroke="#8eb8e8" stroke-width="2"/>
+<text x="80" y="595" font-family="Arial" font-size="26" font-weight="700" fill="#173b8f">On-Chain State &amp; Execute Payment Flow</text>
+
+<rect x="80" y="625" width="220" height="130" rx="14" fill="#ffffff" stroke="#4a90e2" stroke-width="2"/>
+<text x="100" y="657" font-family="Arial" font-size="18" font-weight="700">1. Agent PDA</text>
+<text x="100" y="685" font-family="Arial" font-size="15">[b"agent", owner]</text>
+<text x="100" y="710" font-family="Arial" font-size="14">authority • limits • expiry</text>
+<text x="100" y="731" font-family="Arial" font-size="14">recipient • spent_today</text>
+
+<rect x="355" y="625" width="220" height="130" rx="14" fill="#ffffff" stroke="#4a90e2" stroke-width="2"/>
+<text x="375" y="657" font-family="Arial" font-size="18" font-weight="700">2. Validate</text>
+<text x="375" y="685" font-family="Arial" font-size="14">authority + recipient</text>
+<text x="375" y="707" font-family="Arial" font-size="14">limits + expiry + pause</text>
+<text x="375" y="729" font-family="Arial" font-size="14">balance + rent reserve</text>
+
+<rect x="630" y="625" width="220" height="130" rx="14" fill="#ffffff" stroke="#35a66f" stroke-width="2"/>
+<text x="650" y="657" font-family="Arial" font-size="18" font-weight="700">3. Transfer SOL</text>
+<text x="650" y="685" font-family="Arial" font-size="14">Agent PDA → recipient</text>
+<text x="650" y="707" font-family="Arial" font-size="14">only after all checks pass</text>
+<text x="650" y="729" font-family="Arial" font-size="14">PaymentExecuted event</text>
+
+<rect x="905" y="625" width="220" height="130" rx="14" fill="#ffffff" stroke="#6554c0" stroke-width="2"/>
+<text x="925" y="657" font-family="Arial" font-size="18" font-weight="700">4. Update State</text>
+<text x="925" y="685" font-family="Arial" font-size="14">spent_today += amount</text>
+<text x="925" y="707" font-family="Arial" font-size="14">daily window reset when due</text>
+<text x="925" y="729" font-family="Arial" font-size="14">on-chain deterministic state</text>
+
+<rect x="1180" y="625" width="135" height="130" rx="14" fill="#fff5f5" stroke="#d64545" stroke-width="2"/>
+<text x="1198" y="657" font-family="Arial" font-size="18" font-weight="700" fill="#b42318">FAIL</text>
+<text x="1198" y="685" font-family="Arial" font-size="14">Reject</text>
+<text x="1198" y="707" font-family="Arial" font-size="14">No payment</text>
+<text x="1198" y="729" font-family="Arial" font-size="14">No state update</text>
+
+<path d="M300 690 L355 690" stroke="#2f80ed" stroke-width="3" marker-end="url(#arrowBlue)"/>
+<path d="M575 690 L630 690" stroke="#2f80ed" stroke-width="3" marker-end="url(#arrowBlue)"/>
+<path d="M850 690 L905 690" stroke="#35a66f" stroke-width="3" marker-end="url(#arrowGreen)"/>
+<path d="M850 735 C980 790 1130 790 1180 735" fill="none" stroke="#d64545" stroke-width="3" marker-end="url(#arrowRed)"/>
+
+<defs>
+<marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#2f80ed"/></marker>
+<marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#35a66f"/></marker>
+<marker id="arrowRed" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#d64545"/></marker>
+</defs>
+</svg>
