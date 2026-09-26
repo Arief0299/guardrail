@@ -108,7 +108,7 @@ async function main() {
     connection,
     payer,
     demoOwner.publicKey,
-    20_000_000,
+    30_000_000,
   );
   console.log(explorer(fundingSig));
 
@@ -142,7 +142,7 @@ async function main() {
 
   console.log("\n[3/5] Funding Guardrail vault...");
   const depositSig = await program.methods
-    .deposit(new BN(5_000_000))
+    .deposit(new BN(12_000_000))
     .accounts({
       agent: agentPda,
       owner: demoOwner.publicKey,
@@ -155,7 +155,7 @@ async function main() {
 
   console.log("\n[4/5] Agent requests an allowed 0.005 SOL payment...");
   const paymentSig = await program.methods
-    .executePayment(new BN(5_000_000))
+    .executePayment(new BN(8_000_000))
     .accounts({
       agent: agentPda,
       agentAuthority: agentAuthority.publicKey,
@@ -170,7 +170,7 @@ async function main() {
   console.log("\n[5/5] Agent requests an over-limit payment...");
   try {
     await program.methods
-      .executePayment(new BN(2_000_000))
+      .executePayment(new BN(9_000_000))
       .accounts({
         agent: agentPda,
         agentAuthority: agentAuthority.publicKey,
