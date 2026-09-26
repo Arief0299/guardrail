@@ -30,7 +30,7 @@ Agent authority
 - Solana CLI
 - a funded Devnet wallet
 
-Anchor generates the program IDL under `target/idl`; this repository config copies the generated IDL and TypeScript types into `client/src/idl` during `anchor build`. citeturn0search0turn0search3
+Anchor generates the program IDL under `target/idl`; this repository config copies the generated IDL and TypeScript types into `client/src/idl` during `anchor build`.
 
 ## Run
 
