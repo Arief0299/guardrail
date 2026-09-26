@@ -1,204 +1,221 @@
-# Guardrail
+# AgentPay — Guardrail
 
-Guardrail is a Solana/Anchor security MVP for enforcing policy-controlled payments made by an authorized agent.
+Policy-controlled payment infrastructure for autonomous agents on Solana.
 
-## Overview
+**Guardrail** is the on-chain security layer of **AgentPay**. It turns an agent's payment request into a deterministic policy decision: approve the payment only when authorization, recipient, spending limits, expiry, pause state, and vault-balance checks all pass.
 
-Guardrail places explicit limits around agent-controlled SOL payments:
+> **Current status:** hackathon MVP. The current implementation supports SOL payments on Solana and is designed for local development plus Devnet deployment.
 
-- owner authorization
-- configured agent authorization
-- allowed recipient
-- per-transaction limit
-- daily spending limit
-- policy expiry
-- pause/resume controls
-- vault balance and rent-reserve protection
-- payment execution event
+## Why AgentPay
 
-The goal is to make payment execution deterministic: a payment is executed only when all configured policy checks pass.
+Autonomous agents need the ability to pay, but giving an agent unrestricted wallet authority creates unnecessary risk.
 
-## Architecture
+AgentPay separates **agent execution** from **payment policy**:
 
-![Guardrail architecture](docs/guardrail-architecture.svg)
+```text
+Owner
+  │
+  ├─ configure policy
+  ├─ set agent authority
+  ├─ set recipient
+  └─ fund vault
+          │
+          ▼
+     AgentPay / Agent
+          │
+          │ payment request
+          ▼
+   ┌─────────────────────┐
+   │ Guardrail Program   │
+   │                     │
+   │ authorization       │
+   │ recipient allowlist │
+   │ per-tx limit        │
+   │ daily limit         │
+   │ expiry              │
+   │ pause state          │
+   │ vault + rent check  │
+   └──────────┬──────────┘
+              │
+        ┌─────┴─────┐
+        ▼           ▼
+      APPROVE      REJECT
+        │
+        ▼
+   SOL → recipient
+```
 
-Guardrail separates policy management from payment execution. The owner configures the policy and funds the vault, while the configured agent authority can execute payments only when the on-chain policy checks pass.
+## Guardrail security model
 
-### Execute Payment Flow
+The owner creates and controls an agent policy. The configured agent authority may execute payments only when every on-chain policy check succeeds.
 
-1. **Validate authorization** — the configured agent authority must sign the payment request.
-2. **Validate policy** — pause state, expiry, recipient allowlist, per-transaction limit, and daily spending limit are checked.
-3. **Validate vault balance** — the payment must leave the required rent-exempt reserve.
-4. **Transfer funds** — SOL moves from the agent PDA to the allowed recipient.
-5. **Update state** — daily spending state is updated and a `PaymentExecuted` event is emitted.
+| Control | Enforcement |
+|---|---|
+| Owner authorization | Policy changes, deposits, pause and resume are owner-only |
+| Agent authorization | Only the configured agent authority can execute payments |
+| Recipient allowlist | Payment recipient must match the configured recipient |
+| Per-transaction limit | Individual payment cannot exceed the configured maximum |
+| Daily spending limit | Aggregate spending is capped per daily window |
+| Policy expiry | Payments are rejected after policy expiry |
+| Emergency pause | Owner can stop payment execution |
+| Vault protection | Payment must leave the required rent-exempt reserve |
+| Payment event | Successful payments emit `PaymentExecuted` |
 
-Any failed policy check rejects the transaction before the payment is executed.
+## Core instructions
 
-## Core Instructions
+- `initialize_agent` — create an agent policy
+- `update_policy` — update limits, recipient and expiry
+- `deposit` — fund the agent vault
+- `execute_payment` — execute a policy-controlled SOL payment
+- `pause_agent` — emergency stop
+- `resume_agent` — resume execution
 
-### `initialize_agent`
-Creates the agent policy account and configures:
-
-- agent authority
-- maximum payment per transaction
-- daily spending limit
-- allowed recipient
-- policy expiry
-
-The policy account is derived as a PDA using:
+The agent state is stored in a PDA derived from:
 
 ```text
 [b"agent", owner_pubkey]
 ```
 
-### `update_policy`
-Owner-only policy update. The same core validation rules apply to transaction and daily limits and expiry.
-
-### `deposit`
-Allows the owner to deposit SOL into the agent vault.
-
-### `execute_payment`
-Executes a SOL payment only after policy enforcement succeeds.
-
-Checks include:
-
-1. amount is greater than zero
-2. agent is not paused
-3. policy has not expired
-4. caller matches the configured agent authority
-5. recipient matches the allowed recipient
-6. amount does not exceed the per-transaction limit
-7. daily spending limit is not exceeded
-8. vault retains the required rent reserve
-9. payment is applied and the daily spending counter is updated
-
-Successful payments emit a `PaymentExecuted` event.
-
-### `pause_agent`
-Owner-only emergency pause.
-
-### `resume_agent`
-Owner-only resume operation.
-
-## Security Model
-
-| Control | Purpose |
-|---|---|
-| Owner authorization | Restricts policy management to the configured owner |
-| Agent authorization | Restricts payments to the configured agent authority |
-| Recipient allowlist | Prevents payments to an unexpected recipient |
-| Per-Tx limit | Caps the size of an individual payment |
-| Daily limit | Caps aggregate daily spending |
-| Expiry | Stops payments after the policy expires |
-| Pause | Provides an owner-controlled emergency stop |
-| Vault balance check | Prevents spending into the account's rent reserve |
-| Payment event | Provides an on-chain record of successful payments |
-
-## Test Coverage
-
-The integration test covers both successful execution and policy-enforcement failures:
-
-| Test | Result |
-|---|---|
-| Initialize agent | PASS |
-| Deposit 5 SOL | PASS |
-| Valid payment | PASS |
-| Wrong recipient rejected | PASS |
-| Per-transaction limit enforced | PASS |
-| Unauthorized agent rejected | PASS |
-| Daily limit enforced | PASS |
-| Pause blocks payment | PASS |
-| Resume agent | PASS |
-| Unauthorized owner rejected | PASS |
-| Expired policy rejected | PASS |
-| Zero transaction limit rejected | PASS |
-| Daily limit below transaction limit rejected | PASS |
-| Already-expired policy rejected | PASS |
-| Insufficient vault balance rejected | PASS |
-
-The latest live local-validator run completed with:
+## Repository structure
 
 ```text
-======================================
-ALL GUARDRAIL TESTS PASSED
-======================================
-
-test guardrail_policy_enforcement ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 138.39s
+guardrail/
+├── programs/
+│   └── guardrail/
+│       ├── src/lib.rs
+│       └── tests/test_guardrail.rs
+├── docs/
+│   └── guardrail-architecture.svg
+├── Anchor.toml
+├── Cargo.toml
+├── Cargo.lock
+└── rust-toolchain.toml
 ```
 
-The suite validates the core payment path as well as authorization, recipient restrictions, spending limits, pause/resume behavior, policy expiry, invalid policy configuration, and vault-balance protection.
+The next AgentPay product layer can use this program through an SDK/client without changing the core policy model.
+
+## Test coverage
+
+The Rust integration test exercises the full policy-enforcement path against a local Solana validator:
+
+- initialize agent
+- deposit 5 SOL
+- execute valid payment
+- reject wrong recipient
+- reject per-transaction limit violation
+- reject unauthorized agent
+- enforce daily limit
+- pause and resume
+- reject unauthorized owner
+- reject expired policy
+- reject invalid policy configurations
+- reject insufficient vault balance
+
+Run locally:
+
+```bash
+# Terminal 1
+solana-test-validator --reset
+
+# Terminal 2
+cd ~/guardrail
+anchor build
+anchor deploy
+cargo test --test test_guardrail -- --nocapture
+```
+
+The test client uses `ANCHOR_WALLET` when provided and otherwise falls back to the standard Solana CLI wallet path.
 
 ## Verification
 
-Run formatting checks:
-
 ```bash
 cargo fmt --all -- --check
-```
-
-Run Clippy with warnings denied:
-
-```bash
 cargo clippy --workspace --all-targets -- -D warnings
-```
-
-Run the Guardrail integration test:
-
-```bash
 cargo test --test test_guardrail -- --nocapture
 ```
 
-For a clean deterministic test run, reset the local validator before deployment:
+## Devnet deployment
+
+Solana Devnet is the intended public testing environment for the AgentPay MVP. Devnet uses non-production SOL and is suitable for application testing. citeturn0search5
+
+Configure the CLI wallet for Devnet and make sure it has enough Devnet SOL:
 
 ```bash
-pkill -9 -f solana-test-validator
-sleep 2
-solana-test-validator --reset
+solana config set --url devnet
+solana balance
+solana airdrop 2 --url devnet
 ```
 
-Then, from the repository root:
-
-```bash
-anchor build
-anchor program deploy
-cargo test --test test_guardrail -- --nocapture
-```
-
-For local development, the program must be deployed to the local validator before running the integration test:
+Build and deploy:
 
 ```bash
 anchor build
-anchor deploy
+anchor deploy --provider.cluster devnet
 ```
 
-If the local validator contains an existing deterministic agent PDA, restart it with a reset before redeploying:
+Anchor supports deploying to Devnet by changing the configured cluster or overriding it with `--provider.cluster devnet`. citeturn0search0turn0search2
 
-```pkill -f solana-test-validator
-solana-test-validator --reset
+After deployment, verify the program:
+
+```bash
+solana program show HP8ptgh4CDEwgR7rSESkfR4ZxyrLcg5VfkossDLwU5RS --url devnet
 ```
 
-## Program ID
+**Important:** the Devnet deployment must be performed with the project owner's wallet. Never commit `~/.config/solana/id.json`, private keys, seed phrases, or other credentials.
+
+## Program
+
+**Program ID**
 
 ```text
 HP8ptgh4CDEwgR7rSESkfR4ZxyrLcg5VfkossDLwU5RS
 ```
 
-## Current Scope
+**Cluster:** Solana Devnet / localnet depending on the command used.
 
-This MVP focuses on policy-controlled SOL payments.
+## Current MVP scope
 
-It does not currently implement:
+Supported:
+
+- SOL payments
+- one configured agent authority
+- one allowed recipient
+- per-transaction spending limit
+- daily spending limit
+- policy expiry
+- pause/resume
+- vault balance and rent-reserve protection
+- on-chain payment event
+
+Not yet implemented:
 
 - SPL token payments
-- multisignature governance
 - multiple recipient policies
+- multisignature governance
 - complex role systems
 - off-chain monitoring
 - formal verification
 
-These can be added as future extensions.
+These are intentionally outside the current MVP scope.
+
+## AgentPay product roadmap
+
+The intended product architecture is:
+
+```text
+AI Agent
+   │
+   ▼
+AgentPay Client / SDK
+   │
+   ▼
+Guardrail Program
+   │
+   ▼
+Solana
+```
+
+The current repository implements the **Guardrail on-chain layer**. A lightweight AgentPay client and live Devnet demo can sit on top of the same program.
 
 ## License
 
