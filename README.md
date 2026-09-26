@@ -136,7 +136,7 @@ cargo test --test test_guardrail -- --nocapture
 
 ## Devnet deployment
 
-Solana Devnet is the intended public testing environment for the AgentPay MVP. Devnet uses non-production SOL and is suitable for application testing. citeturn0search5
+Solana Devnet is the intended public testing environment for the AgentPay MVP. Devnet uses non-production SOL and is suitable for application testing.
 
 Configure the CLI wallet for Devnet and make sure it has enough Devnet SOL:
 
@@ -153,7 +153,14 @@ anchor build
 anchor deploy --provider.cluster devnet
 ```
 
-Anchor supports deploying to Devnet by changing the configured cluster or overriding it with `--provider.cluster devnet`. citeturn0search0turn0search2
+Or use the repository helper:
+
+```bash
+chmod +x scripts/deploy-devnet.sh
+./scripts/deploy-devnet.sh
+```
+
+Anchor supports deploying to Devnet by changing the configured cluster or overriding it with `--provider.cluster devnet`.
 
 After deployment, verify the program:
 
