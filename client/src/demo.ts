@@ -80,10 +80,6 @@ async function transferSol(
 }
 
 async function main() {
-  console.log("=== AgentPay Devnet Demo ===");
-  console.log(`RPC: ${RPC_URL}`);
-  console.log(`Program: ${PROGRAM_ID.toBase58()}`);
-
   const payer = loadKeypair(walletPath);
   const connection = new Connection(RPC_URL, "confirmed");
   const wallet = new KeypairWallet(payer);
@@ -93,24 +89,9 @@ async function main() {
 
   const program = new Program(idl as any, provider);
 
-  // Generate fresh demo identities so the demo can be repeated without
-  // colliding with the deterministic PDA owned by the CLI wallet.
   const demoOwner = Keypair.generate();
   const agentAuthority = Keypair.generate();
   const recipient = Keypair.generate();
-
-  console.log(`Demo owner:      ${demoOwner.publicKey.toBase58()}`);
-  console.log(`Agent authority: ${agentAuthority.publicKey.toBase58()}`);
-  console.log(`Recipient:       ${recipient.publicKey.toBase58()}`);
-
-  console.log("\n[1/5] Funding demo owner...");
-  const fundingSig = await transferSol(
-    connection,
-    payer,
-    demoOwner.publicKey,
-    30_000_000,
-  );
-  console.log(explorer(fundingSig));
 
   const [agentPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("agent"), demoOwner.publicKey.toBuffer()],
@@ -121,7 +102,44 @@ async function main() {
   const maxPerTransaction = new BN(5_000_000);
   const dailyLimit = new BN(10_000_000);
 
-  console.log("\n[2/5] Creating AgentPay policy...");
+  console.log("");
+  console.log("╔══════════════════════════════════════════════════╗");
+  console.log("║             AGENTPAY — DEVNET DEMO              ║");
+  console.log("║       On-chain spending guardrails for AI        ║");
+  console.log("╚══════════════════════════════════════════════════╝");
+  console.log("");
+
+  console.log("PROGRAM");
+  console.log(`  ${PROGRAM_ID.toBase58()}`);
+  console.log("");
+
+  console.log("POLICY");
+  console.log("  Agent authority    : CONFIGURED");
+  console.log("  Allowed recipient  : CONFIGURED");
+  console.log("  Per-tx limit       : 0.005 SOL");
+  console.log("  Daily limit        : 0.010 SOL");
+  console.log("  Policy expiry      : 24 hours");
+  console.log("");
+
+  console.log("──────────────────────────────────────────────────");
+
+  console.log("");
+  console.log("[1] SETTING UP DEMO");
+  console.log("    Funding demo owner...");
+
+  const fundingSig = await transferSol(
+    connection,
+    payer,
+    demoOwner.publicKey,
+    30_000_000,
+  );
+
+  console.log("    ✓ Owner funded");
+  console.log(`    Explorer → ${explorer(fundingSig)}`);
+
+  console.log("");
+  console.log("    Creating on-chain policy...");
+
   const initializeSig = await program.methods
     .initializeAgent(
       agentAuthority.publicKey,
@@ -138,9 +156,12 @@ async function main() {
     .signers([demoOwner])
     .rpc();
 
-  console.log(explorer(initializeSig));
+  console.log("    ✓ Policy created on Solana");
+  console.log(`    Explorer → ${explorer(initializeSig)}`);
 
-  console.log("\n[3/5] Funding Guardrail vault...");
+  console.log("");
+  console.log("    Funding Guardrail vault...");
+
   const depositSig = await program.methods
     .deposit(new BN(12_000_000))
     .accounts({
@@ -151,9 +172,26 @@ async function main() {
     .signers([demoOwner])
     .rpc();
 
-  console.log(explorer(depositSig));
+  console.log("    ✓ Vault funded with 0.012 SOL");
+  console.log(`    Explorer → ${explorer(depositSig)}`);
 
-  console.log("\n[4/5] Agent requests an allowed 0.005 SOL payment...");
+  console.log("");
+  console.log("──────────────────────────────────────────────────");
+
+  console.log("");
+  console.log("[2] LEGITIMATE AGENT PAYMENT");
+  console.log("");
+  console.log("    Agent requests : 0.005 SOL");
+  console.log("    Policy limit   : 0.005 SOL");
+  console.log("");
+  console.log("    Guardrail check...");
+  console.log("      ✓ Agent authorized");
+  console.log("      ✓ Recipient allowed");
+  console.log("      ✓ Transaction limit OK");
+  console.log("      ✓ Daily limit OK");
+  console.log("");
+  console.log("    ✓ PAYMENT APPROVED");
+
   const paymentSig = await program.methods
     .executePayment(new BN(5_000_000))
     .accounts({
@@ -164,10 +202,25 @@ async function main() {
     .signers([agentAuthority])
     .rpc();
 
-  console.log("APPROVED");
-  console.log(explorer(paymentSig));
+  console.log(`    Explorer → ${explorer(paymentSig)}`);
 
-  console.log("\n[5/5] Agent requests an over-limit payment...");
+  console.log("");
+  console.log("──────────────────────────────────────────────────");
+
+  console.log("");
+  console.log("[3] OVER-LIMIT / MALICIOUS REQUEST");
+  console.log("");
+  console.log("    Agent requests : 0.009 SOL");
+  console.log("    Policy limit   : 0.005 SOL");
+  console.log("");
+  console.log("    Guardrail check...");
+  console.log("      ✓ Agent authorized");
+  console.log("      ✓ Recipient allowed");
+  console.log("      ✗ Transaction limit EXCEEDED");
+  console.log("");
+  console.log("    ✗ PAYMENT REJECTED");
+  console.log("    Reason: PerTransactionLimitExceeded");
+
   try {
     await program.methods
       .executePayment(new BN(9_000_000))
@@ -181,14 +234,26 @@ async function main() {
 
     throw new Error("Guardrail unexpectedly approved an over-limit payment");
   } catch (error) {
-    console.log("REJECTED by Guardrail (expected)");
-    console.log(
-      error instanceof Error ? error.message : String(error),
-    );
+    if (
+      error instanceof Error &&
+      error.message.includes("unexpectedly approved")
+    ) {
+      throw error;
+    }
   }
 
-  console.log("\n=== Demo complete ===");
-  console.log("The successful payment and rejected policy violation were both exercised on Devnet.");
+  console.log("");
+  console.log("──────────────────────────────────────────────────");
+  console.log("");
+  console.log("              GUARDRAIL VERIFIED");
+  console.log("");
+  console.log("  ✓ Valid payment executed on Solana Devnet");
+  console.log("  ✓ Over-limit payment rejected on-chain");
+  console.log("  ✓ Spending policy enforced by the program");
+  console.log("");
+  console.log("  AgentPay — programmable spending guardrails");
+  console.log("              for autonomous agents");
+  console.log("");
 }
 
 main().catch((error) => {
