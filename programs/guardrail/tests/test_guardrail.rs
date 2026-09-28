@@ -1,4 +1,5 @@
-use std::env;\nuse std::rc::Rc;
+use std::env;
+use std::rc::Rc;
 use std::thread;
 use std::time::Duration;
 

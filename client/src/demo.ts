@@ -118,8 +118,8 @@ async function main() {
   );
 
   const expiry = Math.floor(Date.now() / 1000) + 86_400;
-  const maxPerTransaction = new BN(1_000_000);
-  const dailyLimit = new BN(2_000_000);
+  const maxPerTransaction = new BN(5_000_000);
+  const dailyLimit = new BN(10_000_000);
 
   console.log("\n[2/5] Creating AgentPay policy...");
   const initializeSig = await program.methods
@@ -155,7 +155,7 @@ async function main() {
 
   console.log("\n[4/5] Agent requests an allowed 0.005 SOL payment...");
   const paymentSig = await program.methods
-    .executePayment(new BN(8_000_000))
+    .executePayment(new BN(5_000_000))
     .accounts({
       agent: agentPda,
       agentAuthority: agentAuthority.publicKey,
