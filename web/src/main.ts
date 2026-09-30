@@ -349,7 +349,7 @@ function instruction(
   return new TransactionInstruction({
     programId: PROGRAM_ID,
     keys,
-    data: Buffer.from(data),
+    data,
   });
 }
 
@@ -469,7 +469,7 @@ async function initializePolicy() {
       owner.toBytes(),
       writeU64(BigInt(MAX_TX_LAMPORTS)),
       writeU64(BigInt(DAILY_LIMIT_LAMPORTS)),
-      DEMO_RECIPIENT.toBytes(),
+      owner.toBytes(),
       writeI64(expiry),
     );
 
@@ -560,7 +560,7 @@ async function executePayment(amountLamports: number, isExpectedRejection: boole
         [
           { pubkey: agentPda, isSigner: false, isWritable: true },
           { pubkey: owner, isSigner: true, isWritable: false },
-          { pubkey: DEMO_RECIPIENT, isSigner: false, isWritable: true },
+          { pubkey: owner, isSigner: false, isWritable: true },
         ],
         data,
       ),
