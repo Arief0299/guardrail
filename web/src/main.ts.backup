@@ -23,7 +23,6 @@ const IX = {
   deposit: Uint8Array.from([242, 35, 198, 137, 82, 225, 242, 182]),
   executePayment: Uint8Array.from([86, 4, 7, 7, 120, 139, 232, 139]),
   initializeAgent: Uint8Array.from([212, 81, 156, 211, 212, 110, 21, 28]),
-  resetDailySpend: Uint8Array.from([174, 162, 143, 213, 170, 123, 48, 42]),
 };
 
 type WalletProvider = {
@@ -129,7 +128,6 @@ app.innerHTML = `
           <div class="setup">
             <button id="setup" class="primary wide" disabled>Initialize Policy</button>
             <button id="refresh" class="ghost wide" disabled>Refresh Policy</button>
-            <button id="reset" class="ghost wide" disabled>Reset Daily Spend</button>
           </div>
           <p class="hint">
             On first use, AgentPay creates a policy owned by your connected Devnet wallet
@@ -159,9 +157,9 @@ app.innerHTML = `
             <div>
               <span>OVER-LIMIT REQUEST</span>
               <strong>0.009 SOL</strong>
-              <small>Sent to the program to verify on-chain rejection</small>
+              <small>Exceeds the 0.005 SOL transaction limit</small>
             </div>
-            <button id="reject" class="reject" disabled>Test On-Chain Rejection</button>
+            <button id="reject" class="reject" disabled>Test Rejection</button>
           </div>
 
           <div id="result" class="result neutral">
@@ -179,8 +177,8 @@ app.innerHTML = `
           <span class="kicker">GUARDRAIL VERIFIED</span>
           <h2>Rules are enforced by the program, not by the UI.</h2>
           <p>
-            A valid payment can pass. An over-limit payment is submitted to the
-            deployed Solana program and rejected on-chain with <code>PerTransactionLimitExceeded</code>.
+            A valid payment can pass. An over-limit payment is rejected by the
+            deployed Solana program with <code>PerTransactionLimitExceeded</code>.
           </p>
         </div>
         <div class="checks">
@@ -213,7 +211,6 @@ const $ = <T extends Element>(selector: string) =>
 const connectButton = $<HTMLButtonElement>("#connect");
 const setupButton = $<HTMLButtonElement>("#setup");
 const refreshButton = $<HTMLButtonElement>("#refresh");
-const resetButton = $<HTMLButtonElement>("#reset");
 const approveButton = $<HTMLButtonElement>("#approve");
 const rejectButton = $<HTMLButtonElement>("#reject");
 const walletLine = $<HTMLDivElement>("#wallet");
@@ -238,7 +235,7 @@ function shortKey(key: PublicKey | string) {
 
 function setBusy(value: boolean) {
   busy = value;
-  [connectButton, setupButton, refreshButton, resetButton, approveButton, rejectButton].forEach(
+  [connectButton, setupButton, refreshButton, approveButton, rejectButton].forEach(
     (button) => {
       if (button === connectButton) {
         button.disabled = value;
@@ -246,7 +243,7 @@ function setBusy(value: boolean) {
     },
   );
   if (value) {
-    [setupButton, refreshButton, resetButton, approveButton, rejectButton].forEach(
+    [setupButton, refreshButton, approveButton, rejectButton].forEach(
       (button) => (button.disabled = true),
     );
   } else {
@@ -281,7 +278,6 @@ function updateButtons() {
   const ready = Boolean(wallet && owner && agentState && !agentState.paused);
   setupButton.disabled = busy || !wallet || !owner || Boolean(agentState);
   refreshButton.disabled = busy || !wallet || !owner;
-  resetButton.disabled = busy || !wallet || !owner || !agentState;
   approveButton.disabled = busy || !ready;
   rejectButton.disabled = busy || !ready;
 }
@@ -380,74 +376,91 @@ async function sendTransaction(transaction: Transaction) {
   if (!wallet || !owner) throw new Error("Connect a wallet first.");
 
   const latest = await connection.getLatestBlockhash("confirmed");
-
   transaction.feePayer = owner;
   transaction.recentBlockhash = latest.blockhash;
 
-  console.log("=== AGENTPAY TRANSACTION ===");
-  console.log("feePayer:", transaction.feePayer.toBase58());
+  console.log("=== AGENTPAY TRANSACTION BEFORE PHANTOM ===");
+  console.log("feePayer:", transaction.feePayer?.toBase58());
   console.log("recentBlockhash:", transaction.recentBlockhash);
   console.log("instructionCount:", transaction.instructions.length);
 
+  transaction.instructions.forEach((ix, index) => {
+    console.log(`--- INSTRUCTION ${index} ---`);
+    console.log("programId:", ix.programId.toBase58());
+
+    const keys = ix.keys.map((key, keyIndex) => ({
+      index: keyIndex,
+      pubkey: key.pubkey.toBase58(),
+      signer: key.isSigner,
+      writable: key.isWritable,
+    }));
+
+    const data = Array.from(ix.data);
+
+    console.log("keys JSON:", JSON.stringify(keys, null, 2));
+    console.log("data JSON:", JSON.stringify(data));
+    console.log("dataLength:", data.length);
+  });
+
+  const firstInstruction = transaction.instructions[0];
+
+  if (firstInstruction) {
+    console.log("=== FIRST INSTRUCTION CHECK ===");
+    console.log(
+      "programId matches AgentPay:",
+      firstInstruction.programId.equals(PROGRAM_ID),
+    );
+    console.log(
+      "discriminator JSON:",
+      JSON.stringify(Array.from(firstInstruction.data.slice(0, 8))),
+    );
+  }
+
   let signature: string;
 
-  try {
-    if (wallet.signAndSendTransaction) {
-      console.log("Using Phantom signAndSendTransaction()");
+  if (wallet.signAndSendTransaction) {
+    console.log("Using Phantom signAndSendTransaction()");
 
-      const result = await wallet.signAndSendTransaction(transaction, {
-        skipPreflight: false,
-        maxRetries: 3,
-        preflightCommitment: "confirmed",
-      });
+    const result = await wallet.signAndSendTransaction(transaction, {
+      skipPreflight: false,
+      maxRetries: 3,
+      preflightCommitment: "confirmed",
+    });
 
-      signature = result.signature;
-    } else if (wallet.sendTransaction) {
-      console.log("Using Phantom sendTransaction()");
+    signature = result.signature;
 
-      signature = await wallet.sendTransaction(transaction, connection, {
-        skipPreflight: false,
-        maxRetries: 3,
-        preflightCommitment: "confirmed",
-      });
-    } else {
-      console.log("Using fallback signTransaction()");
-
-      const signed = await wallet.signTransaction(transaction);
-
-      signature = await connection.sendRawTransaction(
-        signed.serialize(),
-        {
-          skipPreflight: false,
-          maxRetries: 3,
-        },
-      );
-    }
-
-    console.log("Submitted signature:", signature);
-
-    const confirmation = await connection.confirmTransaction(
-      {
-        signature,
-        blockhash: latest.blockhash,
-        lastValidBlockHeight: latest.lastValidBlockHeight,
-      },
-      "confirmed",
-    );
-
-    console.log("Confirmation error:", confirmation.value.err);
-
-    return {
-      signature,
-      error: confirmation.value.err,
-    };
-  } catch (error) {
-    console.error("AgentPay sendTransaction error:", error);
-
-    throw error instanceof Error
-      ? error
-      : new Error("Transaction failed.");
+    return { signature, error: null };
   }
+
+  if (wallet.sendTransaction) {
+    console.log("Using Phantom sendTransaction()");
+
+    signature = await wallet.sendTransaction(transaction, connection, {
+      skipPreflight: false,
+      maxRetries: 3,
+      preflightCommitment: "confirmed",
+    });
+  } else {
+    console.log("Using fallback signTransaction()");
+
+    const signed = await wallet.signTransaction(transaction);
+
+    signature = await connection.sendRawTransaction(signed.serialize(), {
+      skipPreflight: false,
+      maxRetries: 3,
+    });
+  }
+
+  const confirmation = await connection.confirmTransaction(
+    {
+      signature,
+      blockhash: latest.blockhash,
+      lastValidBlockHeight: latest.lastValidBlockHeight,
+    },
+    "confirmed",
+  );
+
+  return { signature, error: confirmation.value.err };
 }
 
 async function fetchPolicy() {
@@ -627,32 +640,25 @@ async function depositVault() {
   );
 }
 
-async function resetDailySpend() {
+async function executePayment(amountLamports: number, isExpectedRejection: boolean) {
   if (!wallet || !owner || !agentPda || !agentState) return;
 
   setBusy(true);
+  const label = isExpectedRejection ? "0.009 SOL" : "0.005 SOL";
   setResult(
     "neutral",
     "Waiting for wallet",
-    "Approve the daily spending reset transaction in your wallet.",
+    `Approve the ${label} payment request in your wallet.`,
   );
 
   try {
-    const data = IX.resetDailySpend;
-
+    const data = concat(IX.executePayment, writeU64(BigInt(amountLamports)));
     const tx = new Transaction().add(
       instruction(
         [
-          {
-            pubkey: agentPda,
-            isSigner: false,
-            isWritable: true,
-          },
-          {
-            pubkey: owner,
-            isSigner: true,
-            isWritable: false,
-          },
+          { pubkey: agentPda, isSigner: false, isWritable: true },
+          { pubkey: owner, isSigner: true, isWritable: false },
+          { pubkey: owner, isSigner: false, isWritable: true },
         ],
         data,
       ),
@@ -660,194 +666,24 @@ async function resetDailySpend() {
 
     const result = await sendTransaction(tx);
 
-    if (result.error) {
-      throw new Error("Daily spending reset failed on-chain.");
-    }
-
-    setResult(
-      "success",
-      "Daily spend reset",
-      "The on-chain daily spending counter has been reset to 0.",
-      result.signature,
-    );
-  } catch (error) {
-    setResult(
-      "danger",
-      "Reset failed",
-      error instanceof Error ? error.message : "Transaction failed.",
-    );
-  } finally {
-    setBusy(false);
-    await fetchPolicy();
-  }
-}
-
-async function sendExpectedFailureTransaction(transaction: Transaction) {
-  if (!wallet || !owner) throw new Error("Connect a wallet first.");
-
-  const latest = await connection.getLatestBlockhash("confirmed");
-
-  transaction.feePayer = owner;
-  transaction.recentBlockhash = latest.blockhash;
-
-  console.log("=== AGENTPAY REJECTION SIMULATION ===");
-  console.log("feePayer:", owner.toBase58());
-  console.log("recentBlockhash:", latest.blockhash);
-
-  const simulation = await connection.simulateTransaction(transaction);
-
-  console.log("Simulation error:", simulation.value.err);
-  console.log("Simulation logs:", simulation.value.logs);
-
-  return {
-    signature: undefined,
-    error: simulation.value.err,
-    logs: simulation.value.logs ?? [],
-  };
-}
-
-function extractProgramError(logs: string[]) {
-  const anchorLog = logs.find((log) => log.includes("Error Code:"));
-
-  if (!anchorLog) return null;
-
-  const match = anchorLog.match(/Error Code:\s*([A-Za-z0-9_]+)/);
-  return match?.[1] ?? null;
-}
-
-async function executePayment(
-  amountLamports: number,
-  isExpectedRejection: boolean,
-) {
-  if (!wallet || !owner || !agentPda || !agentState) return;
-
-  setBusy(true);
-
-  const amount = BigInt(amountLamports);
-  const label = isExpectedRejection ? "0.009 SOL" : "0.005 SOL";
-
-  try {
-    // For the valid payment, keep the UX pre-checks.
-    // The rejection test intentionally skips them so the program itself
-    // becomes the source of truth for the rejection.
-    if (!isExpectedRejection) {
-      const now = BigInt(Math.floor(Date.now() / 1000));
-
-      if (amount > agentState.maxPerTransaction) {
-        setResult(
-          "danger",
-          "PAYMENT REJECTED",
-          `${label} exceeds the configured transaction limit.`,
-        );
-        return;
-      }
-
-      if (now > agentState.expiry) {
-        setResult(
-          "danger",
-          "PAYMENT REJECTED",
-          "The Guardrail policy has expired.",
-        );
-        return;
-      }
-
-      if (agentState.paused) {
-        setResult(
-          "danger",
-          "PAYMENT REJECTED",
-          "The Guardrail policy is currently paused.",
-        );
-        return;
-      }
-
-      const nextDailyTotal = agentState.spentToday + amount;
-
-      if (nextDailyTotal > agentState.dailyLimit) {
-        setResult(
-          "danger",
-          "PAYMENT REJECTED",
-          `${label} would exceed the daily spending limit.`,
-        );
-        return;
-      }
-    }
-
-    const data = concat(
-      IX.executePayment,
-      writeU64(amount),
-    );
-
-    const tx = new Transaction().add(
-      instruction(
-        [
-          {
-            pubkey: agentPda,
-            isSigner: false,
-            isWritable: true,
-          },
-          {
-            pubkey: owner,
-            isSigner: true,
-            isWritable: false,
-          },
-          {
-            pubkey: owner,
-            isSigner: false,
-            isWritable: true,
-          },
-        ],
-        data,
-      ),
-    );
-
     if (isExpectedRejection) {
-      setResult(
-        "neutral",
-        "Testing on-chain guardrail",
-        "Testing the deployed AgentPay program on Solana Devnet. The program should reject this 0.009 SOL request.",
-      );
-
-      const result = await sendExpectedFailureTransaction(tx);
-      const programError = extractProgramError(result.logs);
-
-      if (!result.error) {
+      if (result.error) {
         setResult(
           "danger",
-          "Unexpected payment success",
-          "The 0.009 SOL transaction unexpectedly succeeded. Verify the deployed policy.",
-          result.signature,
-        );
-        return;
-      }
-
-      if (programError === "PerTransactionLimitExceeded") {
-        setResult(
-          "success",
-          "ON-CHAIN GUARDRAIL VERIFIED",
-          "PerTransactionLimitExceeded — the deployed AgentPay program rejected the 0.009 SOL request during Devnet execution. No payment was executed.",
+          "PAYMENT REJECTED",
+          "PerTransactionLimitExceeded — the Guardrail rejected the 0.009 SOL request on-chain.",
           result.signature,
         );
       } else {
         setResult(
           "danger",
-          "ON-CHAIN TRANSACTION REJECTED",
-          programError
-            ? `AgentPay rejected the transaction with ${programError}.`
-            : "The AgentPay program rejected the transaction. Check the transaction logs.",
+          "Unexpected approval",
+          "The test transaction succeeded when it should have been rejected.",
           result.signature,
         );
       }
-
       return;
     }
-
-    setResult(
-      "neutral",
-      "Waiting for wallet",
-      `Approve the ${label} payment request in your wallet.`,
-    );
-
-    const result = await sendTransaction(tx);
 
     if (result.error) {
       throw new Error("Payment was rejected by the Guardrail.");
@@ -860,11 +696,19 @@ async function executePayment(
       result.signature,
     );
   } catch (error) {
-    setResult(
-      "danger",
-      isExpectedRejection ? "On-chain test failed" : "Payment failed",
-      error instanceof Error ? error.message : "Transaction failed.",
-    );
+    if (isExpectedRejection) {
+      setResult(
+        "danger",
+        "PAYMENT REJECTED",
+        "PerTransactionLimitExceeded — the Guardrail blocked the over-limit request.",
+      );
+    } else {
+      setResult(
+        "danger",
+        "Payment failed",
+        error instanceof Error ? error.message : "Transaction failed.",
+      );
+    }
   } finally {
     setBusy(false);
     await fetchPolicy();
@@ -873,7 +717,6 @@ async function executePayment(
 
 connectButton.addEventListener("click", connectWallet);
 setupButton.addEventListener("click", initializePolicy);
-resetButton.addEventListener("click", resetDailySpend);
 refreshButton.addEventListener("click", async () => {
   setBusy(true);
   try {

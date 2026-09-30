@@ -1,4 +1,3 @@
-use std::env;
 use std::rc::Rc;
 use std::thread;
 use std::time::Duration;
@@ -211,6 +210,36 @@ fn guardrail_policy_enforcement() {
 
     assert!(result.is_err());
     println!("PASS: daily limit enforced");
+
+    println!("=== RESET DAILY SPEND ===");
+
+    program
+        .request()
+        .accounts(accounts::ResetDailySpend {
+            agent: agent_pda,
+            owner: owner_pubkey,
+        })
+        .args(instruction::ResetDailySpend {})
+        .send()
+        .expect("reset_daily_spend failed");
+
+    println!("PASS: daily spend reset");
+
+    program
+        .request()
+        .accounts(accounts::ExecutePayment {
+            agent: agent_pda,
+            agent_authority: agent_authority.pubkey(),
+            recipient: allowed_recipient.pubkey(),
+        })
+        .args(instruction::ExecutePayment {
+            amount: LAMPORTS_PER_SOL,
+        })
+        .signer(&*agent_authority)
+        .send()
+        .expect("payment after daily reset failed");
+
+    println!("PASS: payment allowed after daily reset");
 
     println!("=== PAUSE AGENT ===");
 
