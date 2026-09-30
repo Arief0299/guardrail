@@ -16,9 +16,7 @@ const EXPLORER_BASE = "https://explorer.solana.com/tx/";
 const MAX_TX_LAMPORTS = 5_000_000;
 const DAILY_LIMIT_LAMPORTS = 10_000_000;
 const DEMO_DEPOSIT_LAMPORTS = 12_000_000;
-const DEMO_RECIPIENT = new PublicKey(
-  "11111111111111111111111111111111",
-);
+// The connected Devnet wallet is also the demo recipient.\n// This keeps the live product self-contained: no second wallet is required.
 
 // Anchor instruction discriminators from the deployed Guardrail IDL.
 const IX = {
