@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import {
   Connection,
   PublicKey,
@@ -349,7 +350,7 @@ function instruction(
   return new TransactionInstruction({
     programId: PROGRAM_ID,
     keys,
-    data,
+    data: Buffer.from(data),
   });
 }
 
