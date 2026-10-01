@@ -667,3 +667,45 @@ footer a:hover { color: #f0c62c; }
     animation: none !important;
   }
 }
+
+/* Vault / funding emphasis used by the live demo */
+#fund,
+#fund-vault,
+.fund,
+.fund-vault {
+  background: linear-gradient(180deg, #f5c42a, #eab308);
+  color: #171200;
+  border-color: rgba(240,185,11,.42);
+  box-shadow: 0 9px 24px rgba(240,185,11,.12);
+}
+#fund:hover:not(:disabled),
+#fund-vault:hover:not(:disabled),
+.fund:hover:not(:disabled),
+.fund-vault:hover:not(:disabled) {
+  background: #f7ca3c;
+  box-shadow: 0 12px 30px rgba(240,185,11,.18);
+}
+
+.vault,
+.vault-balance,
+#vault,
+#vault-balance {
+  color: #f6f7f9;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -.035em;
+}
+
+.vault::before,
+.vault-balance::before,
+#vault::before,
+#vault-balance::before {
+  content: "VAULT";
+  display: block;
+  color: #707984;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  margin-bottom: 5px;
+}
+
