@@ -80,6 +80,15 @@ pub mod guardrail {
         Ok(())
     }
 
+    pub fn reset_daily_spend(ctx: Context<ResetDailySpend>) -> Result<()> {
+        let agent = &mut ctx.accounts.agent;
+
+        agent.spent_today = 0;
+        agent.day_start = Clock::get()?.unix_timestamp;
+
+        Ok(())
+    }
+
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         require!(amount > 0, GuardrailError::InvalidAmount);
 
@@ -197,6 +206,17 @@ pub struct InitializeAgent<'info> {
 
 #[derive(Accounts)]
 pub struct UpdatePolicy<'info> {
+    #[account(
+        mut,
+        has_one = owner @ GuardrailError::UnauthorizedOwner
+    )]
+    pub agent: Account<'info, Agent>,
+
+    pub owner: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ResetDailySpend<'info> {
     #[account(
         mut,
         has_one = owner @ GuardrailError::UnauthorizedOwner

@@ -173,6 +173,33 @@
       "args": []
     },
     {
+      "name": "reset_daily_spend",
+      "discriminator": [
+        174,
+        162,
+        143,
+        213,
+        170,
+        123,
+        48,
+        42
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "resume_agent",
       "discriminator": [
         124,

@@ -179,6 +179,33 @@ export type Guardrail = {
       "args": []
     },
     {
+      "name": "resetDailySpend",
+      "discriminator": [
+        174,
+        162,
+        143,
+        213,
+        170,
+        123,
+        48,
+        42
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "resumeAgent",
       "discriminator": [
         124,
