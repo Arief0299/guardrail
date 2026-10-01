@@ -78,7 +78,7 @@ app.innerHTML = `
   <div class="shell">
     <header class="topbar">
       <a class="brand" href="/">
-        <span class="brand-mark">A</span>
+        <span class="brand-mark"><img src="/agentpay-logo.svg" alt="AgentPay" /></span>
         <span>
           <strong>AgentPay</strong>
           <small>Spending Guardrails</small>
