@@ -1,0 +1,49 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>AgentPay Logo</title>
+  <desc>Geometric shield and A mark for AgentPay</desc>
+
+  <defs>
+    <linearGradient id="gold" x1="42" y1="30" x2="216" y2="226" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD85A"/>
+      <stop offset="0.48" stop-color="#F0B90B"/>
+      <stop offset="1" stop-color="#D89F00"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="72" y1="62" x2="178" y2="200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#DDE3EA" stop-opacity="0.72"/>
+    </linearGradient>
+    <filter id="shadow" x="19" y="12" width="218" height="232" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <path
+    d="M128 18L218 52V116C218 169 182 214 128 238C74 214 38 169 38 116V52L128 18Z"
+    fill="#12161B"
+    stroke="url(#gold)"
+    stroke-width="7"
+    filter="url(#shadow)"
+  />
+
+  <path
+    d="M128 40L197 66V116C197 155 172 189 128 211C84 189 59 155 59 116V66L128 40Z"
+    fill="#0B0E11"
+    stroke="rgba(240,185,11,0.24)"
+    stroke-width="2"
+  />
+
+  <path
+    d="M128 70L82 176H104L114 152H142L152 176H174L128 70ZM128 112L136 135H120L128 112Z"
+    fill="url(#shine)"
+  />
+
+  <path
+    d="M104 186H174"
+    stroke="url(#gold)"
+    stroke-width="7"
+    stroke-linecap="round"
+  />
+
+  <circle cx="187" cy="77" r="10" fill="url(#gold)"/>
+  <path d="M183 77H191" stroke="#171200" stroke-width="3" stroke-linecap="round"/>
+</svg>
