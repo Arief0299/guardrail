@@ -144,7 +144,8 @@ pub mod guardrail {
             GuardrailError::DailyLimitExceeded
         );
 
-        let rent_reserve = Rent::get()?.minimum_balance(Agent::INIT_SPACE);
+        // Account::space includes the 8-byte Anchor discriminator.
+        let rent_reserve = Rent::get()?.minimum_balance(8 + Agent::INIT_SPACE);
 
         let available = agent
             .to_account_info()
