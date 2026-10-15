@@ -1,3 +1,4 @@
+use std::env;
 use std::rc::Rc;
 use std::thread;
 use std::time::Duration;
@@ -13,8 +14,14 @@ const LAMPORTS_PER_SOL: u64 = 1_000_000_000;
 
 #[test]
 fn guardrail_policy_enforcement() {
-    let payer = read_keypair_file("/home/arief/.config/solana/id.json")
-        .expect("failed to load payer keypair");
+    let wallet_path = env::var("ANCHOR_WALLET").unwrap_or_else(|_| {
+        let home = env::var("HOME")
+            .expect("HOME must be set when ANCHOR_WALLET is not provided");
+        format!("{home}/.config/solana/id.json")
+    });
+    let payer = read_keypair_file(&wallet_path).unwrap_or_else(|error| {
+        panic!("failed to load payer keypair from {wallet_path}: {error}");
+    });
 
     let agent_authority = Rc::new(Keypair::new());
     let allowed_recipient = Rc::new(Keypair::new());
